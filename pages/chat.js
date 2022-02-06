@@ -5,10 +5,6 @@ import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/router'
 import { ButtonSendSticker } from '../src/components/ButtonSendSticker'
 
-
-
-
-
 export default function ChatPage() {
     const roteamento = useRouter();
     const username = roteamento.query.username;
