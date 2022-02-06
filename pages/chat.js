@@ -228,18 +228,7 @@ function MessageList(props) {
                 props.messagesList.map(
                     function (mensagem) {
                         return (
-                            <Box
-                                key={mensagem.id}
-                                styleSheet={{
-                                    boxShadow: 'inset 1px 1px 1px 1px',
-                                    color: appConfig.theme.colors.primary[500],
-                                    borderRadius: '5px',
-                                    padding: '6px',
-                                    marginBottom: '12px',
-                                    hover: {
-                                        backgroundColor: appConfig.theme.colors.neutrals[700],
-                                    }
-                                }}>
+                            <Baloon messageObject={mensagem}>
                                 <Text
                                     styleSheet={{
                                         display: 'flex',
@@ -293,7 +282,7 @@ function MessageList(props) {
                                         {(new Date().toLocaleDateString())}
                                     </Text>
                                 </Text>
-                            </Box>
+                            </Baloon>
                         )
                     }
                 )
@@ -312,6 +301,39 @@ function StickerContainer(props) {
             }}
         />
     )
+}
+
+function Baloon(props) {
+    const mensagem = props.messageObject;
+    return(
+    <div 
+        key = { mensagem.id } 
+        className={mensagem.de == 'isjacrod' ? 'left_aligned' : 'right_aligned'}>
+        {props.children}
+        <style jsx>{`
+            div {
+                box-shadow: inset 1px 1px 1px 1px;
+                color: ${appConfig.theme.colors.primary['500']};
+                border-radius: 5px;
+                padding: 10px;
+                margin-bottom: 12px;
+                width: 70%;
+            }
+            div:hover {
+                background-color: ${appConfig.theme.colors.neutrals['700']};
+            }
+            .right_aligned {
+                align-self: end;
+                border-radius: 20px 20px 0px 20px;
+            }
+            .left_aligned {
+                align-self: start;
+                border-radius: 20px 20px 20px 0px;
+            }
+        `}</style>
+    </div>
+    )
+
 }
 
 class Loading extends React.Component {
