@@ -5,15 +5,17 @@ import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/router'
 import { ButtonSendSticker } from '../src/components/ButtonSendSticker'
 
+
 export default function ChatPage() {
+    // Usado para obter o nome do usuário via URL
     const roteamento = useRouter();
     const username = roteamento.query.username;
 
-    // Sua lógica vai aqui
+    // Estados contendo a mensagem digitada
     const [message, setMessage] = React.useState('');
     const [messageList, setMessageList] = React.useState([]);
 
-
+    // usado para animação do loading
     const [messagesLoaded, setMessagesLoaded] = React.useState(false);
     const [messageSent, setMessageSent] = React.useState(true);
 
@@ -22,7 +24,16 @@ export default function ChatPage() {
     const SUPA_BASE_URL = "https://nxzgqmtkwgoeggmrstfg.supabase.co";
     const supabase = createClient(SUPA_BASE_URL, SUPA_BASE_ANON_KEY);
 
-    // Puxa as mensagens do servidor
+    // Ouver por inserções de dados e chama o atualizador da lista offline
+    function OuvePorNovasMensagens() {
+        supabase
+            .from('mensagens')
+            .on('INSERT', (ultimaMensagensInserida) => {
+                atualizaListaDeMensagens([ultimaMensagensInserida.new]);
+            }).subscribe()
+    }
+
+    // Puxa todas mensagens do servidor, executado apenas a primeira vez
     function puxaMensagens() {
         supabase.from('mensagens')
             .select('*')
@@ -30,36 +41,38 @@ export default function ChatPage() {
             .then(({ data }) => {
                 console.log('puxado', data.length, 'mensagens')
                 setMessagesLoaded(true)
-                setMessageList(data)
+                atualizaListaDeMensagens(data)
             })
     }
 
-    function OuvePorNovasMensagens(oldMessages) {
-        supabase
-        .from('mensagens')
-        .on('INSERT', (mensagensInseridas) => {
-            puxaMensagens();
-        }).subscribe()
+    // Atualiza a cópia das mensagens offline adicionando uma nova mensagem a lista
+    function atualizaListaDeMensagens(mensagemNova) {
+        setMessageList((messageListUpdated) => {
+            return[
+            ...mensagemNova,
+            ...messageListUpdated]
+        })
     }
 
+    // Executado somente a primeira vez que o componente é carregado
     React.useEffect(
         function () {
             console.log('puxando mensagens do servidor');
             setMessagesLoaded(false);
             puxaMensagens();
-
-            OuvePorNovasMensagens()
+            OuvePorNovasMensagens();
         }, [])
 
-
+    // Atualiza o valor da mensagem a medida que é digitado
     function insertMessage(ev) {
         setMessage(ev.target.value);
     }
 
-    function handleMessage(mensagemAEnviar) {
+    // Checa e envia mensagem ao servidor
+    function sendMessage(mensagemAEnviar) {
             if (mensagemAEnviar == '')
                 return
-
+            // Cria um objeto contendo os campos necessários
             let objMessage = {
                 // id: messageList.length + 2,
                 de: username,
@@ -77,15 +90,10 @@ export default function ChatPage() {
                 .then(({ data }) => {
                     console.log('enviado ', data[0].texto)
                     setMessageSent(true)
-                    /* 
-                    setMessageList([
-                        data[0],
-                        ...messageList
-                    ]); */
                 })
     }
 
-    // ./Sua lógica vai aqui
+    // Visual
     return (
 
         <Box
@@ -145,7 +153,7 @@ export default function ChatPage() {
                     >
                         <ButtonSendSticker 
                         onStickerClick={ (stickerURL) => {
-                            handleMessage(`:sticker:${stickerURL}`)
+                            sendMessage(`:sticker:${stickerURL}`)
                         }}/>
                         <TextField
                             placeholder="Insira sua mensagem aqui..."
@@ -167,7 +175,7 @@ export default function ChatPage() {
                             onKeyPress={ (ev) => {
                                 if (ev.key == 'Enter' && (!ev.shiftKey)) {
                                     ev.preventDefault();
-                                    handleMessage(message);
+                                    sendMessage(message);
                                 }
                             }}
                         />
@@ -182,7 +190,7 @@ export default function ChatPage() {
                             }}
                             onClick={ (ev) => {
                                 ev.preventDefault();
-                                handleMessage(message);
+                                sendMessage(message);
                             }}
                         />
                     </Box>
@@ -193,6 +201,7 @@ export default function ChatPage() {
     )
 }
 
+// Components
 function Header() {
     return (
         <>
@@ -212,6 +221,7 @@ function Header() {
 }
 
 function MessageList(props) {
+    console.log('renderizando lista')
     return (
         <Box
             tag="ul"
@@ -228,7 +238,7 @@ function MessageList(props) {
                 props.messagesList.map(
                     function (mensagem) {
                         return (
-                            <Baloon messageObject={mensagem}>
+                            <Baloon messageObject={mensagem} key={mensagem.id}>
                                 <Text
                                     styleSheet={{
                                         display: 'flex',
@@ -279,7 +289,7 @@ function MessageList(props) {
                                             }
                                         }}
                                     >
-                                        {(new Date().toLocaleDateString())}
+                                        {(new Date(mensagem.created_at).toLocaleString())}
                                     </Text>
                                 </Text>
                             </Baloon>
@@ -307,12 +317,11 @@ function Baloon(props) {
     const mensagem = props.messageObject;
     return(
     <div 
-        key = { mensagem.id } 
         className={mensagem.de == 'isjacrod' ? 'left_aligned' : 'right_aligned'}>
         {props.children}
         <style jsx>{`
             div {
-                box-shadow: inset 1px 1px 1px 1px;
+                box-shadow: inset -3px -3px 0 1px, inset 1px 1px 0 1px;
                 color: ${appConfig.theme.colors.primary['500']};
                 border-radius: 5px;
                 padding: 10px;
@@ -336,6 +345,7 @@ function Baloon(props) {
 
 }
 
+// Animação que cria um texto com pontinhos
 class Loading extends React.Component {
     constructor(props) {
         super(props);
