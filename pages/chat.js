@@ -48,9 +48,9 @@ export default function ChatPage() {
     // Atualiza a cópia das mensagens offline adicionando uma nova mensagem a lista
     function atualizaListaDeMensagens(mensagemNova) {
         setMessageList((messageListUpdated) => {
-            return[
-            ...mensagemNova,
-            ...messageListUpdated]
+            return [
+                ...mensagemNova,
+                ...messageListUpdated]
         })
     }
 
@@ -62,36 +62,6 @@ export default function ChatPage() {
             puxaMensagens();
             OuvePorNovasMensagens();
         }, [])
-
-    // Atualiza o valor da mensagem a medida que é digitado
-    function insertMessage(ev) {
-        setMessage(ev.target.value);
-    }
-
-    // Checa e envia mensagem ao servidor
-    function sendMessage(mensagemAEnviar) {
-            if (mensagemAEnviar == '')
-                return
-            // Cria um objeto contendo os campos necessários
-            let objMessage = {
-                // id: messageList.length + 2,
-                de: username,
-                texto: mensagemAEnviar,
-            }
-            // Previne envio múltiplo
-            setMessage('');
-            setMessageSent(false);
-
-            //Faz um novo insert do objeto mensagem no banco de dados
-            supabase.from('mensagens')
-                .insert([
-                    objMessage
-                ])
-                .then(({ data }) => {
-                    console.log('enviado ', data[0].texto)
-                    setMessageSent(true)
-                })
-    }
 
     // Visual
     return (
@@ -144,56 +114,7 @@ export default function ChatPage() {
                         {(!messageSent) ? <Loading text="Enviando" /> : null}
                     </Text>
 
-                    <Box
-                        as="form"
-                        styleSheet={{
-                            display: 'flex',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <ButtonSendSticker 
-                        onStickerClick={ (stickerURL) => {
-                            sendMessage(`:sticker:${stickerURL}`)
-                        }}/>
-                        <TextField
-                            placeholder="Insira sua mensagem aqui..."
-                            value={message}
-                            data-username="isjacrod"
-                            type="textarea"
-                            styleSheet={{
-                                display: 'flex',
-                                width: '100%',
-                                border: '0',
-                                resize: 'none',
-                                borderRadius: '5px',
-                                padding: '6px 8px',
-                                backgroundColor: appConfig.theme.colors.neutrals[800],
-                                marginRight: '12px',
-                                color: appConfig.theme.colors.neutrals[200],
-                            }}
-                            onChange={insertMessage}
-                            onKeyPress={ (ev) => {
-                                if (ev.key == 'Enter' && (!ev.shiftKey)) {
-                                    ev.preventDefault();
-                                    sendMessage(message);
-                                }
-                            }}
-                        />
-                        <Button type='submit'
-                            label='Send'
-                            size='sm'
-                            buttonColors={{
-                                contrastColor: appConfig.theme.colors.neutrals["000"],
-                                mainColor: appConfig.theme.colors.primary[500],
-                                mainColorLight: appConfig.theme.colors.primary[400],
-                                mainColorStrong: appConfig.theme.colors.primary[600],
-                            }}
-                            onClick={ (ev) => {
-                                ev.preventDefault();
-                                sendMessage(message);
-                            }}
-                        />
-                    </Box>
+                    <MessageForm userName={username} setMessageSent={setMessageSent} dataBase={supabase} />
 
                 </Box>
             </Box>
@@ -218,6 +139,115 @@ function Header() {
             </Box>
         </>
     )
+}
+
+class MessageForm extends React.Component {
+    constructor(props) {
+        super(props);
+        this.username = props.userName;
+        this.supabase = props.dataBase;
+        this.setMessageSent = props.setMessageSent;
+        this.state = {
+            message: '',
+        };
+        this.handleChange = this.handleChange.bind(this);
+        this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.sendMessage = this.sendMessage.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    // Atualiza o valor da mensagem a medida que é digitado
+    handleChange(ev) {
+        this.setState({ message: ev.target.value });
+    }
+
+    handleKeyPress(ev) {
+        if (ev.key == 'Enter' && (!ev.shiftKey)) {
+            ev.preventDefault();
+            this.sendMessage();
+        }
+    }
+
+    handleSubmit(ev) {
+        ev.preventDefault();
+        this.sendMessage();
+    }
+
+    // Checa e envia mensagem ao servidor
+    sendMessage() {
+        console.log("tentativa de envio de", this.state.message)
+        // Evita mensagem vazia
+        if (this.state.message == '')
+            return
+
+        // Cria um objeto contendo os campos necessários
+        let objMessage = {
+            // id: messageList.length + 2,
+            de: this.username,
+            texto: this.state.message,
+        }
+
+        // Limpa o campo previnindo envio múltiplo
+        this.setState({ message: '' });
+        this.setMessageSent(false);
+
+        //Faz um novo insert do objeto mensagem no banco de dados
+        this.supabase.from('mensagens')
+            .insert([
+                objMessage
+            ])
+            .then(({ data }) => {
+                console.log('enviado ', data[0].texto)
+                this.setMessageSent(true)
+            })
+    }
+
+    render() {
+        return (
+            <Box
+                as="form"
+                styleSheet={{
+                    display: 'flex',
+                    alignItems: 'center',
+                }}
+                onSubmit={this.handleSubmit}
+            >
+                <ButtonSendSticker
+                    onStickerClick={(stickerURL) => {
+                        this.setState({ message: `:sticker:${stickerURL}` }, this.sendMessage);;
+                    }} />
+
+                <TextField
+                    placeholder="Insira sua mensagem aqui..."
+                    value={this.state.message}
+                    type="textarea"
+                    styleSheet={{
+                        display: 'flex',
+                        width: '100%',
+                        border: '0',
+                        resize: 'none',
+                        borderRadius: '5px',
+                        padding: '6px 8px',
+                        backgroundColor: appConfig.theme.colors.neutrals[800],
+                        marginRight: '12px',
+                        color: appConfig.theme.colors.neutrals[200],
+                    }}
+                    onChange={this.handleChange}
+                    onKeyPress={this.handleKeyPress}
+                />
+                <Button type='submit'
+                    label='Send'
+                    size='sm'
+                    buttonColors={{
+                        contrastColor: appConfig.theme.colors.neutrals["000"],
+                        mainColor: appConfig.theme.colors.primary[500],
+                        mainColorLight: appConfig.theme.colors.primary[400],
+                        mainColorStrong: appConfig.theme.colors.primary[600],
+                    }}
+                />
+            </Box>
+        )
+    }
 }
 
 function MessageList(props) {
@@ -277,7 +307,7 @@ function MessageList(props) {
                                         </Text>
                                     </Box>
                                     {mensagem.texto.startsWith(':sticker:') ?
-                                        <StickerContainer src={mensagem.texto.replace(':sticker:','')}/>
+                                        <StickerContainer src={mensagem.texto.replace(':sticker:', '')} />
                                         : <Text>{mensagem.texto}</Text>
                                     }
                                     <Text
@@ -302,9 +332,9 @@ function MessageList(props) {
 }
 
 function StickerContainer(props) {
-    const URL=props.src;
+    const URL = props.src;
     return (
-        <Image src={URL} 
+        <Image src={URL}
             styleSheet={{
                 width: '15%',
                 height: '15%',
@@ -315,11 +345,11 @@ function StickerContainer(props) {
 
 function Baloon(props) {
     const mensagem = props.messageObject;
-    return(
-    <div 
-        className={mensagem.de == 'isjacrod' ? 'left_aligned' : 'right_aligned'}>
-        {props.children}
-        <style jsx>{`
+    return (
+        <div
+            className={mensagem.de == 'isjacrod' ? 'left_aligned' : 'right_aligned'}>
+            {props.children}
+            <style jsx>{`
             div {
                 box-shadow: inset -3px -3px 0 1px, inset 1px 1px 0 1px;
                 color: ${appConfig.theme.colors.primary['500']};
@@ -340,7 +370,7 @@ function Baloon(props) {
                 border-radius: 20px 20px 20px 0px;
             }
         `}</style>
-    </div>
+        </div>
     )
 
 }
