@@ -7,12 +7,19 @@ import { ButtonSendSticker } from '../src/components/ButtonSendSticker'
 
 
 export default function ChatPage() {
-    // Usado para obter o nome do usuário via URL
+    // Define o nome do usuário a partir da URL
     const roteamento = useRouter();
-    const username = roteamento.query.username;
+    const [username, setUserName] = React.useState('');
+
+    React.useEffect(
+        function () {
+            if (roteamento.isReady) {
+                setUserName(roteamento.query.username)
+            }
+        }, [roteamento.isReady]
+    )
 
     // Estados contendo a mensagem digitada
-    const [message, setMessage] = React.useState('');
     const [messageList, setMessageList] = React.useState([]);
 
     // usado para animação do loading
@@ -144,7 +151,6 @@ function Header() {
 class MessageForm extends React.Component {
     constructor(props) {
         super(props);
-        this.username = props.userName;
         this.supabase = props.dataBase;
         this.setMessageSent = props.setMessageSent;
         this.state = {
@@ -183,7 +189,7 @@ class MessageForm extends React.Component {
         // Cria um objeto contendo os campos necessários
         let objMessage = {
             // id: messageList.length + 2,
-            de: this.username,
+            de: this.props.userName,
             texto: this.state.message,
         }
 
